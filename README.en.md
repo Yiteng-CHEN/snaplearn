@@ -128,8 +128,8 @@ SnapLearn is an **open, inclusive, and innovative** education community. We welc
 - 📢 Community outreach & documentation
 
 > 👉 See: [CONTRIBUTING.md](CONTRIBUTING.md) for details  
-> 👉 Submit issues: [GitHub Issues](https://github.com/yourusername/snaplearn/issues)  
-> 👉 Join discussions: [GitHub Discussions](https://github.com/yourusername/snaplearn/discussions)
+> 👉 Submit issues: [GitHub Issues](https://github.com/Yiteng-CHEN/snaplearn/issues)  
+> 👉 Join discussions: [GitHub Discussions](https://github.com/Yiteng-CHEN/snaplearn/discussions)
 
 ---
 

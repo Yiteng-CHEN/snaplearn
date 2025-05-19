@@ -151,7 +151,7 @@ SnapLearn 是一个**开放、包容、创新**的教育社区。我们欢迎每
 
 | 渠道                    | 状态                                                    |
 | --------------------- | ----------------------------------------------------- |
-| 💬 GitHub Discussions | ✅ [开放讨论区](https://github.com/yourusername/snaplearn/discussions) |
+| 💬 GitHub Discussions | ✅ [开放讨论区](https://github.com/Yiteng-CHEN/snaplearn/discussions) |
 | 📧 邮件联系               | [eatonchen@hotmail.com](mailto:eatonchen@hotmail.com) |
 | 👥 微信交流群 / Telegram   | 🕐 敬请期待（开发中）                                          |
 
