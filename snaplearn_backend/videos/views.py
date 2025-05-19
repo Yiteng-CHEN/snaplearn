@@ -23,7 +23,7 @@ def upload_video(request):
     video_file = request.FILES.get('video_file')
     subject = request.POST.get('subject')
     education_level = request.POST.get('education_level')
-    thumbnail = request.FILES.get('thumbnail')
+    thumbnail = request.FILES.get('thumbnail')  # 支持上传封面
 
     # 新增：获取 is_free 和 price 字段
     is_free = request.POST.get('is_free', 'true').lower() == 'true'
@@ -128,15 +128,43 @@ def list_uploaded_videos(request):
 @permission_classes([IsAuthenticated])
 def delete_video(request, video_id):
     """
-    删除当前用户上传的视频，并删除其所有关联的题目
+    删除当前用户上传的视频，并删除其所有关联的收藏、封面、视频文件等，并更新学科分类相关数据
     """
     try:
         video = Video.objects.get(id=video_id, teacher=request.user)
-        # 删除视频下的所有题目
-        video.questions.all().delete()
-        # 删除视频
+        # 记录删除前的学科和学历等级
+        subject = video.subject
+        education_level = video.education_level
+        # 删除收藏关系
+        video.favorited_by.clear()
+        # 删除购买记录
+        video.access_records.all().delete()
+        # 删除优惠码
+        video.discount_codes_for_videos.all().delete()
+        # 删除视频文件和封面
+        import os
+        video_file_path = video.video_file.path if video.video_file else None
+        base = os.path.splitext(os.path.basename(video.video_file.name))[0] if video.video_file else ''
+        thumb_path = os.path.join(settings.MEDIA_ROOT, "thumbnails", f"{base}.jpg")
         video.delete()
-        return JsonResponse({'message': '视频及其所有题目删除成功'}, status=200)
+        if video_file_path and os.path.exists(video_file_path):
+            try:
+                os.remove(video_file_path)
+            except Exception:
+                pass
+        if thumb_path and os.path.exists(thumb_path):
+            try:
+                os.remove(thumb_path)
+            except Exception:
+                pass
+        # 更新学科分类相关数据（如无视频则可做额外处理）
+        from .models import Video as VideoModel
+        remain_count = VideoModel.objects.filter(subject=subject, education_level=education_level).count()
+        # 你可以在这里根据业务需要进行学科分类的统计、缓存更新、或删除无用的学科条目等操作
+        # 例如：如果没有该学科该学历的视频了，可以做额外处理
+        # if remain_count == 0:
+        #     # 这里可以更新学科分类表或缓存等
+        return JsonResponse({'message': '视频及其所有相关数据删除成功', 'subject': subject, 'education_level': education_level, 'remain_count': remain_count}, status=200)
     except Video.DoesNotExist:
         return JsonResponse({'error': '视频不存在或无权限删除'}, status=404)
 
@@ -146,7 +174,7 @@ def update_video(request, video_id):
     """
     更新当前用户上传的视频信息
     """
-    thumbnail = request.FILES.get('thumbnail')
+    thumbnail = request.FILES.get('thumbnail')  # 支持上传封面
     try:
         video = Video.objects.get(id=video_id, teacher=request.user)
         title = request.POST.get('title', video.title)

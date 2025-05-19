@@ -100,6 +100,25 @@ function AdminPage() {
     }
   };
 
+  // 新增：清理冗余文件
+  const handleCleanup = async () => {
+    setMessage('正在清理冗余文件...');
+    try {
+      const res = await axios.post(
+        'http://127.0.0.1:8000/admin/cleanup/',
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      setMessage(res.data && res.data.message ? res.data.message : '清理完成');
+    } catch (err) {
+      setMessage('清理失败，请检查后端接口');
+    }
+  };
+
   // 计算图片显示尺寸
   const getImgDisplaySize = () => {
     // 旋转后宽高互换
@@ -348,6 +367,25 @@ function AdminPage() {
     <UserLayout>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
         <h2>管理员页面</h2>
+        {/* 新增：刷新/清理冗余文件按钮 */}
+        <button
+          style={{
+            marginBottom: 18,
+            padding: '8px 32px',
+            background: '#ff4d4f',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 4,
+            fontWeight: 'bold',
+            fontSize: 16,
+            cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+          onClick={handleCleanup}
+        >
+          刷新/清理冗余文件
+        </button>
+        {/* 新增按钮结束 */}
         {/* 新增：筛选按钮组 */}
         <div style={{ display: 'flex', gap: 16, margin: '24px 0 18px 0' }}>
           <button

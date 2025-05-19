@@ -17,6 +17,7 @@ function ManageContentPage() {
   const [videos, setVideos] = useState([]);
   const [editStates, setEditStates] = useState({});
   const [editingId, setEditingId] = useState(null);
+  const [thumbnailFile, setThumbnailFile] = useState(null); // 新增：本地封面文件
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,9 +28,38 @@ function ManageContentPage() {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
-        setVideos(response.data.videos || []);
+        // 修复：确保 thumbnail_url 字段正确，且为绝对路径，并且推断 video_file 字段
+        const videosWithThumb = (response.data.videos || []).map(v => {
+          let thumb = v.thumbnail_url;
+          // 如果 thumbnail_url 存在且不是 http(s) 开头，补全为绝对路径
+          if (thumb && !/^https?:\/\//.test(thumb)) {
+            const origin = window.location.origin;
+            if (thumb.startsWith('/')) {
+              thumb = origin + thumb;
+            } else {
+              thumb = origin + '/' + thumb;
+            }
+          }
+          // 如果没有 thumbnail_url，尝试推断
+          if (!thumb) {
+            let base = '';
+            // video_file 可能是相对路径或绝对路径
+            if (v.video_file) {
+              let fileName = '';
+              if (typeof v.video_file === 'string') {
+                fileName = v.video_file.split('/').pop();
+              } else if (v.video_file && v.video_file.name) {
+                fileName = v.video_file.name.split('/').pop();
+              }
+              base = fileName.split('.')[0];
+              thumb = window.location.origin + `/media/thumbnails/${base}.jpg`;
+            }
+          }
+          return { ...v, thumbnail_url: thumb };
+        });
+        setVideos(videosWithThumb);
         const states = {};
-        (response.data.videos || []).forEach(v => {
+        videosWithThumb.forEach(v => {
           states[v.id] = {
             title: v.title,
             description: v.description,
@@ -48,6 +78,17 @@ function ManageContentPage() {
     };
     fetchVideos();
   }, [navigate]);
+
+  // 新增：上传封面时自动标记 changed
+  useEffect(() => {
+    if (!editingId) return;
+    if (thumbnailFile) {
+      setEditStates(prev => ({
+        ...prev,
+        [editingId]: { ...prev[editingId], changed: true }
+      }));
+    }
+  }, [thumbnailFile, editingId]);
 
   const isChanged = (video, state) => {
     return (
@@ -80,19 +121,23 @@ function ManageContentPage() {
   const handleSave = async (id) => {
     const state = editStates[id];
     try {
+      const formData = new FormData();
+      formData.append('title', state.title);
+      formData.append('description', state.description);
+      formData.append('subject', state.subject);
+      formData.append('education_level', state.education_level);
+      formData.append('is_free', state.is_free);
+      formData.append('price', state.is_free ? '' : state.price);
+      if (thumbnailFile) {
+        formData.append('thumbnail', thumbnailFile); // 新增：上传封面
+      }
       await axios.post(
         `http://127.0.0.1:8000/videos/${id}/update/`,
-        {
-          title: state.title,
-          description: state.description,
-          subject: state.subject,
-          education_level: state.education_level,
-          is_free: state.is_free,
-          price: state.is_free ? null : state.price,
-        },
+        formData,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'multipart/form-data'
           },
         }
       );
@@ -116,6 +161,7 @@ function ManageContentPage() {
         [id]: { ...prev[id], changed: false }
       }));
       setEditingId(null);
+      setThumbnailFile(null); // 清空本地封面
     } catch (error) {
       alert('更新视频信息失败');
     }
@@ -403,17 +449,22 @@ function ManageContentPage() {
                 ))}
               </select>
             </div>
+            <div style={uploadStyles.inputGroup}>
+              <label style={uploadStyles.label}>视频封面（可选）</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => setThumbnailFile(e.target.files[0])}
+                style={{ marginTop: 8 }}
+              />
+              {/* 新增：显示已有封面路径 */}
+              {video && video.thumbnail_url && (
+                <div style={{ marginTop: 6, color: '#888', fontSize: 13 }}>
+                  当前封面：<span style={{ wordBreak: 'break-all' }}>{video.thumbnail_url}</span>
+                </div>
+              )}
+            </div>
             <div style={uploadStyles.freeRow}>
-              {/*
-              <label>
-                <input
-                  type="checkbox"
-                  checked={state.is_free}
-                  onChange={e => handleFieldChange(editingId, 'is_free', e.target.checked)}
-                  style={{ marginRight: 6 }}
-                /> 免费
-              </label>
-              */}
               {!state.is_free && (
                 <>
                   <span>价格：</span>

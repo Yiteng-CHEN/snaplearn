@@ -26,6 +26,7 @@ urlpatterns = [
     path('users/', include('users.urls')),
     path('videos/', include('videos.urls')),
     path('i18n/', include('django.conf.urls.i18n')),  # 添加语言切换功能
+    path('admin/', include('admin.urls')),  # 新增：注册admin自定义接口
 ]
 
 # 保证开发环境下 media 文件可访问

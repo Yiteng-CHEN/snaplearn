@@ -63,12 +63,13 @@ function LoginPage() {
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
 
-      // 根据角色跳转
+      // 登录成功后根据角色跳转
       if (role === 'admin') {
-        navigate('/admin'); // 管理员跳转到管理员页面
+        window.location.href = '/admin';
       } else {
-        navigate('/videos'); // 普通用户跳转到第一个视频详情页
+        window.location.href = '/videos';
       }
+
     } catch (error) {
       if (error.response && error.response.data.error) {
         setError(error.response.data.error);

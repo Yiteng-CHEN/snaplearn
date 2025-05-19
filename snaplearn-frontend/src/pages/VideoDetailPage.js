@@ -12,8 +12,7 @@ function VideoDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const navigate = useNavigate();
-  const allSubjects = ['全部', '语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治'];
-  const [subjects, setSubjects] = useState(allSubjects);
+  const [subjects, setSubjects] = useState(['全部']);
   const containerRef = useRef();
   const subjectBarRef = useRef();
   const [dragging, setDragging] = useState(false);
@@ -132,14 +131,51 @@ function VideoDetailPage() {
   };
 
   useEffect(() => {
-    const handleWheel = (e) => {
-      if (e.deltaY > 0 && currentIdx < videos.length - 1) setCurrentIdx(i => i + 1);
-      if (e.deltaY < 0 && currentIdx > 0) setCurrentIdx(i => i - 1);
-    };
+    // 推荐页鼠标滚轮切换视频，阻止页面滚动
     const node = containerRef.current;
-    if (node) node.addEventListener('wheel', handleWheel);
-    return () => { if (node) node.removeEventListener('wheel', handleWheel); };
-  }, [currentIdx, videos.length]);
+    if (!node || videos.length === 0) return;
+
+    // 只在鼠标悬停在视频区域时才切换视频并阻止页面滚动
+    const handleWheel = (e) => {
+      // 阻止页面滚动
+      e.preventDefault();
+      // 计算学历等级可见范围
+      const educationOrder = ['primary', 'middle', 'high', 'bachelor', 'master', 'phd'];
+      const idx = educationOrder.indexOf(userLevel);
+      let allowedLevels = [];
+      if (idx !== -1) allowedLevels = educationOrder.slice(0, idx + 1);
+      // 筛选出当前 subject 和学历等级可见的视频
+      let filtered = videos.filter(v =>
+        (subject === '全部' || v.subject === subject) &&
+        allowedLevels.includes(v.education_level)
+      );
+      if (filtered.length <= 1) return;
+      // 当前在 filtered 中的索引
+      const currentId = videos[currentIdx]?.id;
+      const filteredIdx = filtered.findIndex(v => v.id === currentId);
+      let nextFilteredIdx = filteredIdx;
+      if (e.deltaY > 0) {
+        // 下一个
+        nextFilteredIdx = filteredIdx + 1;
+        if (nextFilteredIdx >= filtered.length) nextFilteredIdx = 0;
+      } else if (e.deltaY < 0) {
+        // 上一个
+        nextFilteredIdx = filteredIdx - 1;
+        if (nextFilteredIdx < 0) nextFilteredIdx = filtered.length - 1;
+      }
+      // 找到在原 videos 中的索引
+      const realIdx = videos.findIndex(v => v.id === filtered[nextFilteredIdx]?.id);
+      if (realIdx !== -1 && realIdx !== currentIdx) setCurrentIdx(realIdx);
+    };
+
+    // 兼容移除 passive 监听器
+    node.addEventListener('wheel', handleWheel, { passive: false });
+
+    // 防止 React 18 严格模式下重复绑定
+    return () => {
+      node.removeEventListener('wheel', handleWheel, { passive: false });
+    };
+  }, [videos, currentIdx, subject, userLevel, subjects]);
 
   useEffect(() => {
     const bar = subjectBarRef.current;
@@ -174,7 +210,7 @@ function VideoDetailPage() {
   }, [subject, subjects]);
 
   useEffect(() => {
-    // 拉取所有有视频的学科时也用学历等级范围
+    // 拉取所有有视频的学科，且只显示当前用户学历等级可见的视频的学科
     if (!userLevel) return;
     const educationLevelsParam = getEducationLevelsParam(userLevel);
     axios.get('http://127.0.0.1:8000/videos/', {
@@ -184,18 +220,21 @@ function VideoDetailPage() {
       }
     }).then(res => {
       const results = res.data.results || [];
-      const subjectSet = new Set();
+      // 只统计当前学历等级下有视频的学科
+      const subjectCount = {};
       results.forEach(v => {
-        if (v.subject && v.subject.trim()) subjectSet.add(v.subject);
+        if (v.subject && v.subject.trim()) {
+          subjectCount[v.subject] = (subjectCount[v.subject] || 0) + 1;
+        }
       });
-      // 只显示当前学历等级范围内实际有视频的学科
-      const filteredSubjects = ['全部', ...allSubjects.filter(s => s !== '全部' && subjectSet.has(s))];
+      const filteredSubjects = ['全部', ...Object.keys(subjectCount).filter(s => !!s && s.trim())];
       setSubjects(filteredSubjects);
-      if (subject !== '全部' && !subjectSet.has(subject)) {
+      // 如果当前 subject 已经没有视频，则自动切回“全部”
+      if (subject !== '全部' && !subjectCount[subject]) {
         setSubject('全部');
       }
     });
-  }, [userLevel]);
+  }, [userLevel, subject]);
 
   const styles = {
     container: {
@@ -227,7 +266,7 @@ function VideoDetailPage() {
   // 不管有无视频都渲染 container 和底部导航
   return (
     <UserLayout>
-      <div style={styles.container}>
+      <div ref={containerRef} style={styles.container}>
         {/* 学科分类条 */}
         <div
           ref={subjectBarRef}

@@ -13,6 +13,7 @@ function UploadContentPage() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [countdown, setCountdown] = useState(3);
+  const [thumbnailFile, setThumbnailFile] = useState(null); // 新增：封面文件
   const navigate = useNavigate();
 
   const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治'];
@@ -64,6 +65,9 @@ function UploadContentPage() {
     formData.append('subject', subject);
     formData.append('education_level', educationLevel);
     formData.append('video_file', videoFile);
+    if (thumbnailFile) {
+      formData.append('thumbnail', thumbnailFile); // 新增：上传封面
+    }
 
     try {
       await axios.post('/videos/upload/', formData, {
@@ -78,6 +82,7 @@ function UploadContentPage() {
       setVideoFile(null);
       setSubject('');
       setEducationLevel('');
+      setThumbnailFile(null); // 清空封面
       setTimeout(() => navigate('/videos'), 1200);
     } catch (err) {
       setMsg('上传失败，请检查信息或稍后重试');
@@ -161,6 +166,16 @@ function UploadContentPage() {
               onChange={e => setVideoFile(e.target.files[0])}
               style={{ marginTop: 8 }}
               required
+            />
+          </div>
+          {/* 新增：上传封面 */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ fontWeight: 'bold' }}>视频封面（可选）：</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={e => setThumbnailFile(e.target.files[0])}
+              style={{ marginTop: 8 }}
             />
           </div>
           <button
