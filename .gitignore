@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+db.sqlite3
+.env
+.venv/
+venv/
+.env.*
+*.log
+
+# Django media（忽略所有上传的媒体文件，包括视频、头像、证书等）
+snaplearn_backend/media/
+
+# Node
+node_modules/
+dist/
+build/
+
+# VSCode
+.vscode/
+
+# 前端环境变量
+snaplearn-frontend/.env
+snaplearn-frontend/.env.*

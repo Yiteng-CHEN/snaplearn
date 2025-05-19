@@ -1,0 +1,13 @@
+进入虚拟环境的方法：
+切换到项目目录：/短视频教育
+用cmd：
+    .venv\Scripts\activate
+用ps：
+    .venv\Scripts\Activate.ps1
+
+
+
+若代码有更新，运行下面步骤完成github代码提交：
+git add .
+git commit -m "你的提交说明"
+git push
