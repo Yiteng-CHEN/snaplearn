@@ -65,28 +65,28 @@ SnapLearn is a community-driven platform where users learn efficiently through *
 
 > SnapLearn is a full-stack project using **React** (frontend) and **Django REST Framework** (backend).
 
-### 0. Prerequisites
+### 0️⃣ Prerequisites
 
 - Node.js >= 16
 - Python >= 3.8
 - Git
 - (Recommended) Python virtual environment (venv/conda)
 
-### 1. Clone the repo
+### 1️⃣ Clone the repo
 
 ```bash
-git clone https://github.com/yourusername/snaplearn.git
+git clone https://github.com/Yiteng-CHEN/snaplearn.git
 cd snaplearn
 ```
 
-2. Start the frontend
+2️⃣ Start the frontend
 ```bash
 cd snaplearn-frontend
 npm install
 npm start
 ```
 
-3. Start the backend
+3️⃣ Start the backend
 ```bash
 cd snaplearn_backend
 pip install -r requirements.txt
@@ -94,7 +94,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-4. (Optional) Run tests
+4️⃣ (Optional) Run tests
 ```bash
 # Frontend
 npm test
@@ -151,7 +151,7 @@ SnapLearn is an **open, inclusive, and innovative** education community. We welc
 
 | Channel                    | Status                                                |
 | -------------------------- | ----------------------------------------------------- |
-| 💬 GitHub Discussions      | ✅ [Open](https://github.com/yourusername/snaplearn/discussions) |
+| 💬 GitHub Discussions      | ✅ [Open](https://github.com/Yiteng-CHEN/snaplearn/discussions) |
 | 📧 Email Contact           | [eatonchen@hotmail.com](mailto:eatonchen@hotmail.com) |
 | 🧑‍🤝‍🧑 WeChat / Telegram | ⏳ Coming soon                                         |
 

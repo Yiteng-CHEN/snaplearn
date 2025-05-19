@@ -75,7 +75,7 @@ SnapLearn 是一个开放平台，旨在让用户通过**不超过 10 分钟**�
 ### 1️⃣ 克隆仓库
 
 ```bash
-git clone https://github.com/yourusername/snaplearn.git
+git clone https://github.com/Yiteng-CHEN/snaplearn.git
 cd snaplearn
 ```
 
@@ -127,9 +127,9 @@ SnapLearn 是一个**开放、包容、创新**的教育社区。我们欢迎每
 - 🌍 翻译与国际化（i18n）
 - 📢 社区推广与文档完善
 
-> 👉 查看详细贡献说明：[CONTRIBUTING.md](CONTRIBUTING.md)
-> 👉 提交 Issue：[GitHub Issues](https://github.com/yourusername/snaplearn/issues)
-> 👉 参与讨论：[GitHub Discussions](https://github.com/yourusername/snaplearn/discussions)
+> 👉 查看详细贡献说明：[CONTRIBUTING.md](CONTRIBUTING.md)  
+> 👉 提交 Issue：[GitHub Issues](https://github.com/Yiteng-CHEN/snaplearn/issues)  
+> 👉 参与讨论：[GitHub Discussions](https://github.com/Yiteng-CHEN/snaplearn/discussions)
 
 ---
 
