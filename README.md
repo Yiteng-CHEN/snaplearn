@@ -22,6 +22,16 @@ SnapLearn 是一个开放平台，旨在让用户通过**不超过 10 分钟**�
 
 ---
 
+## 🌟 项目亮点
+
+- **高质量内容保障**：仅认证教师可上传，杜绝低质内容。
+- **AI 智能助学**：AI 辅助批改、解题思路引导，提升学习效率。
+- **极致碎片化体验**：短视频+滑动流，随时随地高效学习。
+- **多维度个性推荐**：支持学历、学科、兴趣等多标签筛选。
+- **开源社区共建**：开发者、教师、学习者共同参与，持续进化。
+
+---
+
 ## ✨ 项目核心功能
 
 | 功能模块 | 描述 |
@@ -45,11 +55,22 @@ SnapLearn 是一个开放平台，旨在让用户通过**不超过 10 分钟**�
 - 教师认证后台
 - AI 解题思路演示（草图）
 
+> 示例占位图：  
+> ![首页内容流示意](docs/demo_feed.png)  
+> ![教师认证后台示意](docs/demo_teacher.png)
+
 ---
 
 ## 🚀 快速开始（开发者指南）
 
 > 本项目为前后端分离结构，前端基于 React，后端基于 Django REST Framework
+
+### 0️⃣ 环境依赖
+
+- Node.js >= 16
+- Python >= 3.8
+- Git
+- 推荐使用虚拟环境（venv/conda）
 
 ### 1️⃣ 克隆仓库
 
@@ -69,8 +90,19 @@ npm start
 ```bash
 cd snaplearn_backend
 pip install -r requirements.txt
+python manage.py migrate
 python manage.py runserver
 ```
+
+4️⃣ （可选）运行测试
+```bash
+# 前端
+npm test
+# 后端
+python manage.py test
+```
+
+💡 常见问题请查阅 [FAQ.md](docs/FAQ.md)
 
 🧠 技术架构概览
 - 前端：React, Axios, Ant Design
@@ -95,7 +127,9 @@ SnapLearn 是一个**开放、包容、创新**的教育社区。我们欢迎每
 - 🌍 翻译与国际化（i18n）
 - 📢 社区推广与文档完善
 
-> 👉 查看详细贡献说明：CONTRIBUTING.md
+> 👉 查看详细贡献说明：[CONTRIBUTING.md](CONTRIBUTING.md)
+> 👉 提交 Issue：[GitHub Issues](https://github.com/yourusername/snaplearn/issues)
+> 👉 参与讨论：[GitHub Discussions](https://github.com/yourusername/snaplearn/discussions)
 
 ---
 
@@ -117,7 +151,7 @@ SnapLearn 是一个**开放、包容、创新**的教育社区。我们欢迎每
 
 | 渠道                    | 状态                                                    |
 | --------------------- | ----------------------------------------------------- |
-| 💬 GitHub Discussions | ✅ 开放讨论区                                               |
+| 💬 GitHub Discussions | ✅ [开放讨论区](https://github.com/yourusername/snaplearn/discussions) |
 | 📧 邮件联系               | [eatonchen@hotmail.com](mailto:eatonchen@hotmail.com) |
 | 👥 微信交流群 / Telegram   | 🕐 敬请期待（开发中）                                          |
 
@@ -142,3 +176,5 @@ SnapLearn 的愿景是：让每个人都能在碎片时间高效学习，获得�
 - 是设计师 👉 欢迎参与界面与体验设计
 
 ⭐ **Star 本项目，开启下一代教育平台的可能性。让我们一起用代码改变教育！**
+
+> 欢迎任何建议、反馈和 PR，期待你的加入！

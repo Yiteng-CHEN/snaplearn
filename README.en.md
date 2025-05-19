@@ -22,6 +22,16 @@ SnapLearn is a community-driven platform where users learn efficiently through *
 
 ---
 
+## 🌟 Project Highlights
+
+- **Quality Content**: Only certified educators can upload, ensuring high standards.
+- **AI-powered Learning**: AI grading and guided hints for smarter study.
+- **Microlearning Experience**: Short videos, swipe to learn anytime.
+- **Personalized Recommendations**: Filter by education, subject, and interests.
+- **Open Source Collaboration**: Built by developers, teachers, and learners together.
+
+---
+
 ## ✨ Core Features
 
 | Feature | Description |
@@ -45,11 +55,22 @@ SnapLearn is a community-driven platform where users learn efficiently through *
 - Teacher verification dashboard
 - AI-powered learning (planned)
 
+> Example placeholders:  
+> ![Feed Demo](docs/demo_feed.png)  
+> ![Teacher Dashboard Demo](docs/demo_teacher.png)
+
 ---
 
 ## 🚀 Getting Started (For Developers)
 
 > SnapLearn is a full-stack project using **React** (frontend) and **Django REST Framework** (backend).
+
+### 0. Prerequisites
+
+- Node.js >= 16
+- Python >= 3.8
+- Git
+- (Recommended) Python virtual environment (venv/conda)
 
 ### 1. Clone the repo
 
@@ -69,20 +90,19 @@ npm start
 ```bash
 cd snaplearn_backend
 pip install -r requirements.txt
+python manage.py migrate
 python manage.py runserver
 ```
 
-4. Push updated README files to GitHub
+4. (Optional) Run tests
 ```bash
-# 1. 添加 README 文件到暂存区
-git add README.md README.en.md
-
-# 2. 提交更改
-git commit -m "docs: update README and README.en.md"
-
-# 3. 推送到远程仓库
-git push
+# Frontend
+npm test
+# Backend
+python manage.py test
 ```
+
+💡 See [FAQ.md](docs/FAQ.md) for common issues.
 
 🧠 Tech Stack Overview
 - Frontend: React, Axios, Ant Design
@@ -107,7 +127,9 @@ SnapLearn is an **open, inclusive, and innovative** education community. We welc
 - 🌍 Translations & internationalization (i18n)
 - 📢 Community outreach & documentation
 
-> 👉 See: CONTRIBUTING.md for details
+> 👉 See: [CONTRIBUTING.md](CONTRIBUTING.md) for details  
+> 👉 Submit issues: [GitHub Issues](https://github.com/yourusername/snaplearn/issues)  
+> 👉 Join discussions: [GitHub Discussions](https://github.com/yourusername/snaplearn/discussions)
 
 ---
 
@@ -129,7 +151,7 @@ SnapLearn is an **open, inclusive, and innovative** education community. We welc
 
 | Channel                    | Status                                                |
 | -------------------------- | ----------------------------------------------------- |
-| 💬 GitHub Discussions      | ✅ Open                                               |
+| 💬 GitHub Discussions      | ✅ [Open](https://github.com/yourusername/snaplearn/discussions) |
 | 📧 Email Contact           | [eatonchen@hotmail.com](mailto:eatonchen@hotmail.com) |
 | 🧑‍🤝‍🧑 WeChat / Telegram | ⏳ Coming soon                                         |
 
@@ -155,3 +177,5 @@ If you're:
 - A designer → Help us improve the UI/UX
 
 ⭐ **Star this project and join us — let's build the next-generation education platform together!**
+
+> We welcome all feedback, suggestions, and PRs. Join us and make a difference!
