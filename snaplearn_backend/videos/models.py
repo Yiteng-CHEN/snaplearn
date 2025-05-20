@@ -167,20 +167,3 @@ class VideoAccess(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.video.title}"
-
-
-class DiscountCode(models.Model):
-    video = models.ForeignKey(
-        'videos.Video',
-        on_delete=models.CASCADE,
-        related_name="discount_codes_for_videos",
-    )
-    code = models.CharField(max_length=20, unique=True)
-    description = models.TextField(blank=True, null=True, verbose_name="描述")
-    remaining_uses = models.PositiveIntegerField(default=0)
-    expiration_date = models.DateTimeField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
-    is_active = models.BooleanField(default=True, verbose_name="是否启用")
-
-    def __str__(self):
-        return f"{self.code} - {self.video.title}"

@@ -11,6 +11,8 @@ function VideoDetailPage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [homework, setHomework] = useState(null);
+  const [homeworkId, setHomeworkId] = useState(null);
   const navigate = useNavigate();
   const [subjects, setSubjects] = useState(['全部']);
   const containerRef = useRef();
@@ -92,6 +94,34 @@ function VideoDetailPage() {
     }).then(res => {
       setIsFavorite((res.data.results || []).some(v => v.id === videoId));
     });
+  }, [videos, currentIdx]);
+
+  useEffect(() => {
+    // 拉取当前视频的作业
+    if (videos.length > 0 && videos[currentIdx]?.id) {
+      axios.get(`http://127.0.0.1:8000/videos/${videos[currentIdx].id}/homework/`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => {
+        if (res.data && Array.isArray(res.data.questions) && res.data.questions.length > 0) {
+          setHomework(res.data);
+          // 修正：确保 homeworkId 来自后端返回的 id 字段
+          if (typeof res.data.id !== 'undefined' && res.data.id !== null) {
+            setHomeworkId(res.data.id);
+          } else {
+            setHomeworkId(null);
+          }
+        } else {
+          setHomework(null);
+          setHomeworkId(null);
+        }
+      }).catch(() => {
+        setHomework(null);
+        setHomeworkId(null);
+      });
+    } else {
+      setHomework(null);
+      setHomeworkId(null);
+    }
   }, [videos, currentIdx]);
 
   const handleFollow = async () => {
@@ -392,6 +422,47 @@ function VideoDetailPage() {
               )}
             </div>
             <div style={{ fontSize: 14, color: '#888', marginTop: 20, textAlign: 'left' }}>简介：{video.description}</div>
+            {/* 作业展示与按钮 */}
+            {homework && (
+              <div style={{ marginTop: 32, border: '1px solid #eee', borderRadius: 8, padding: 18 }}>
+                <h3>作业：{homework.title}</h3>
+                <div style={{ marginBottom: 12, color: '#888' }}>{homework.description}</div>
+                {homework.questions.map((q, idx) => (
+                  <div key={idx} style={{ marginBottom: 18, padding: 12, background: '#fafbfc', borderRadius: 6 }}>
+                    <div><b>题目{idx + 1} [{q.question_type === 'single' ? '单选' : q.question_type === 'multiple' ? '多选' : '主观'}]</b></div>
+                    <div style={{ margin: '8px 0' }}>{q.text}</div>
+                    {(q.question_type === 'single' || q.question_type === 'multiple') && Array.isArray(q.options) && (
+                      <ul>
+                        {q.options.map((opt, oIdx) => (
+                          <li key={oIdx}>{String.fromCharCode(65 + oIdx)}. {opt}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <div style={{ color: '#888', fontSize: 13 }}>分值：{q.score}</div>
+                  </div>
+                ))}
+                {/* 去做作业按钮 */}
+                {homeworkId && (
+                  <button
+                    style={{
+                      marginTop: 16,
+                      background: '#1890ff',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 4,
+                      padding: '10px 32px',
+                      fontWeight: 'bold',
+                      fontSize: 16,
+                      cursor: 'pointer'
+                    }}
+                    // 修正：跳转到 /dohomework/${video.id}
+                    onClick={() => navigate(`/dohomework/${video.id}`)}
+                  >
+                    去做作业
+                  </button>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

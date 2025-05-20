@@ -11,7 +11,7 @@ const MainLayout = ({ children }) => {
       position: 'fixed',
       zIndex: 1,
       width: '100%',
-      backgroundColor: '#001529', // Ant Design 默认深蓝色
+      backgroundColor: '#001529',
       display: 'flex',
       alignItems: 'center',
       padding: '60px 60px',
@@ -24,18 +24,16 @@ const MainLayout = ({ children }) => {
     },
     content: {
       padding: '24px 50px',
-      marginTop: '64px',
+      marginTop: '124px', // 增加顶部间距，避免被 header 遮挡
       flex: 1,
-      backgroundColor: '#f0f2f5', // Ant Design 默认浅灰色背景
+      backgroundColor: '#f0f2f5',
+      minHeight: 'calc(100vh - 184px)', // header+footer高度
     },
     footer: {
       textAlign: 'center',
       backgroundColor: '#001529',
       color: '#fff',
       padding: '10px 0',
-      bottom: 0,
-      position: 'fixed', // 固定位置
-      width: '100%', // 占满页面宽度
     },
     menu: {
       border: 'none',
@@ -52,7 +50,7 @@ const MainLayout = ({ children }) => {
       {/* 页眉 */}
       <Header style={styles.header}>
         <div style={styles.logo}>SnapLearn</div>
-        <Menu mode="horizontal" style={styles.menu}>
+        <Menu mode="horizontal" style={styles.menu} theme="dark">
           <Menu.Item key="login">
             <Link to="/login" style={styles.menuItem}>
               登录

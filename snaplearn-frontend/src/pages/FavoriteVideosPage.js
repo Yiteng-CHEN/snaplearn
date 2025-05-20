@@ -7,6 +7,9 @@ function FavoriteVideosPage() {
   const [favorites, setFavorites] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [showDetail, setShowDetail] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [homework, setHomework] = useState(null);
+  const [homeworkId, setHomeworkId] = useState(null);
   const containerRef = useRef();
   const detailRef = useRef();
   const navigate = useNavigate();
@@ -22,6 +25,31 @@ function FavoriteVideosPage() {
       setCurrentIdx(0);
     });
   }, []);
+
+  // 当选中视频时拉取作业内容
+  useEffect(() => {
+    if (!selectedVideo) {
+      setHomework(null);
+      setHomeworkId(null);
+      return;
+    }
+    axios.get(`http://127.0.0.1:8000/videos/${selectedVideo.id}/homework/`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    }).then(res => {
+      if (res.data && Array.isArray(res.data.questions) && res.data.questions.length > 0) {
+        setHomework(res.data);
+        // 拉取 homework_id（需后端返回 id 字段，若无可通过其它接口查找）
+        if (res.data.id) setHomeworkId(res.data.id);
+        else setHomeworkId(null);
+      } else {
+        setHomework(null);
+        setHomeworkId(null);
+      }
+    }).catch(() => {
+      setHomework(null);
+      setHomeworkId(null);
+    });
+  }, [selectedVideo]);
 
   // 放大播放时支持滚轮切换
   useEffect(() => {
@@ -168,7 +196,7 @@ function FavoriteVideosPage() {
               <div
                 key={item.id || idx}
                 style={styles.thumbBox(false)}
-                onClick={() => { setCurrentIdx(idx); setShowDetail(true); }}
+                onClick={() => { setCurrentIdx(idx); setShowDetail(true); setSelectedVideo(item); }}
               >
                 <img
                   src={item.thumbnail_url || '/default-thumb.png'}
@@ -190,7 +218,7 @@ function FavoriteVideosPage() {
           <div ref={detailRef}>
             {/* 关闭按钮 */}
             <button
-              onClick={() => setShowDetail(false)}
+              onClick={() => { setShowDetail(false); setSelectedVideo(null); }}
               style={{
                 position: 'absolute',
                 right: 36,
@@ -232,6 +260,46 @@ function FavoriteVideosPage() {
               </div>
             </div>
             <div style={{ fontSize: 14, color: '#888', marginTop: 20, textAlign: 'left' }}>简介：{video.description}</div>
+            {/* 作业展示 */}
+            {homework && (
+              <div style={{ marginTop: 32, border: '1px solid #eee', borderRadius: 8, padding: 18 }}>
+                <h3>作业：{homework.title}</h3>
+                <div style={{ marginBottom: 12, color: '#888' }}>{homework.description}</div>
+                {homework.questions.map((q, idx) => (
+                  <div key={idx} style={{ marginBottom: 18, padding: 12, background: '#fafbfc', borderRadius: 6 }}>
+                    <div><b>题目{idx + 1} [{q.question_type === 'single' ? '单选' : q.question_type === 'multiple' ? '多选' : '主观'}]</b></div>
+                    <div style={{ margin: '8px 0' }}>{q.text}</div>
+                    {(q.question_type === 'single' || q.question_type === 'multiple') && Array.isArray(q.options) && (
+                      <ul>
+                        {q.options.map((opt, oIdx) => (
+                          <li key={oIdx}>{String.fromCharCode(65 + oIdx)}. {opt}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <div style={{ color: '#888', fontSize: 13 }}>分值：{q.score}</div>
+                  </div>
+                ))}
+                {/* 去做作业按钮 */}
+                {homeworkId && (
+                  <button
+                    style={{
+                      marginTop: 16,
+                      background: '#1890ff',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 4,
+                      padding: '10px 32px',
+                      fontWeight: 'bold',
+                      fontSize: 16,
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => navigate(`/homework/do/${homeworkId}`)}
+                  >
+                    去做作业
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

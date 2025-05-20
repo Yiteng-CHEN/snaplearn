@@ -11,6 +11,7 @@ function VideoListPage() {
   const [teacherName, setTeacherName] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [homework, setHomework] = useState(null);
   const navigate = useNavigate();
   const containerRef = useRef();
   const detailRef = useRef();
@@ -75,6 +76,23 @@ function VideoListPage() {
     if (node) node.addEventListener('wheel', handleWheel);
     return () => { if (node) node.removeEventListener('wheel', handleWheel); };
   }, [showDetail, currentIdx, videos.length]);
+
+  // 拉取作业信息（仅在详情页展开时拉取当前视频的作业）
+  useEffect(() => {
+    if (showDetail && videos.length > 0 && videos[currentIdx]?.id) {
+      axios.get(`http://127.0.0.1:8000/videos/${videos[currentIdx].id}/homework/`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => {
+        if (res.data && Array.isArray(res.data.questions) && res.data.questions.length > 0) {
+          setHomework(res.data);
+        } else {
+          setHomework(null);
+        }
+      }).catch(() => setHomework(null));
+    } else {
+      setHomework(null);
+    }
+  }, [showDetail, videos, currentIdx]);
 
   if (!videos.length) return <div>暂无视频</div>;
   const video = videos[currentIdx];
@@ -230,6 +248,47 @@ function VideoListPage() {
               </div>
             </div>
             <div style={{ fontSize: 14, color: '#888', marginTop: 20, textAlign: 'left' }}>简介：{video.description}</div>
+            {/* 作业按钮（如有作业） */}
+            {homework && (
+              <div style={{ marginTop: 32, padding: 18, background: '#f8fafd', borderRadius: 8, border: '1px solid #eee' }}>
+                <div style={{ fontWeight: 'bold', fontSize: 17, marginBottom: 10 }}>作业：{homework.title}</div>
+                <div style={{ color: '#666', marginBottom: 10 }}>{homework.description}</div>
+                <div>
+                  {homework.questions.map((q, idx) => (
+                    <div key={idx} style={{ marginBottom: 14 }}>
+                      <div style={{ fontWeight: 'bold' }}>题目{idx + 1}（{q.question_type === 'single' ? '单选' : q.question_type === 'multiple' ? '多选' : '主观'}，分值：{q.score}）</div>
+                      <div style={{ margin: '4px 0 0 0' }}>{q.text}</div>
+                      {(q.question_type === 'single' || q.question_type === 'multiple') && (
+                        <ul style={{ margin: '6px 0 0 0', paddingLeft: 18 }}>
+                          {q.options && q.options.map((opt, oIdx) => (
+                            <li key={oIdx}>{String.fromCharCode(65 + oIdx)}. {opt}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {q.question_type === 'subjective' && (
+                        <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>主观题</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  style={{
+                    marginTop: 10,
+                    background: '#1890ff',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 4,
+                    padding: '8px 32px',
+                    fontWeight: 'bold',
+                    fontSize: 16,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => navigate(`/dohomework/${video.id}`)}
+                >
+                  去做作业
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

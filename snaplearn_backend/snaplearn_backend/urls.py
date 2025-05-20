@@ -18,21 +18,17 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.conf.urls.i18n import i18n_patterns
 from . import views
 
 urlpatterns = [
-    path('', views.default_view, name='default'), 
+    path('', views.default_view, name='default'),
     path('users/', include('users.urls')),
     path('videos/', include('videos.urls')),
-    path('i18n/', include('django.conf.urls.i18n')),  # 添加语言切换功能
-    path('admin/', include('admin.urls')),  # 新增：注册admin自定义接口
+    path('i18n/', include('django.conf.urls.i18n')),
+    path('admin/', admin.site.urls),  # 只注册一次Django后台
+    path('adminapi/', include('admin.urls')),  # 如果有自定义admin接口，建议用adminapi或其它避免冲突
+    path('homework/', include('homework.urls')),
 ]
 
-# 保证开发环境下 media 文件可访问
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-urlpatterns += i18n_patterns(
-    path('admin/', admin.site.urls),
-)

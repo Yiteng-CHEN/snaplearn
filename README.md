@@ -129,7 +129,10 @@ SnapLearn 是一个**开放、包容、创新**的教育社区。我们欢迎每
 
 > 👉 查看详细贡献说明：[CONTRIBUTING.md](CONTRIBUTING.md)  
 > 👉 提交 Issue：[GitHub Issues](https://github.com/Yiteng-CHEN/snaplearn/issues)  
-> 👉 参与讨论：[GitHub Discussions](https://github.com/Yiteng-CHEN/snaplearn/discussions)
+> 👉 参与讨论：[GitHub Discussions](https://github.com/Yiteng-CHEN/snaplearn/discussions)  
+
+> ⚠️ 如遇 404 错误，请先在 GitHub 仓库设置中启用 Discussions 功能：  
+> 仓库主页 → Settings → Features → 勾选 Discussions
 
 ---
 
@@ -137,10 +140,10 @@ SnapLearn 是一个**开放、包容、创新**的教育社区。我们欢迎每
 
 - ✅ 教师认证 + 视频上传
 - ✅ 视频浏览 + 内容流系统
-- 🚧 作业上传与答案隐藏机制
-- 🚧 AI 主观题批改引擎
+- ✅ 作业上传与答案隐藏机制
+- ✅ AI 主观题批改引擎
 - 🚧 AI 解题思路引导系统
-- 🚧 用户端错题集、收藏夹
+- ✅ 用户端错题集、收藏夹
 - 🚧 支持多语言（国际化）
 - 🚧 Docker 一键部署
 - 🚧 移动端 App（Flutter/React Native）

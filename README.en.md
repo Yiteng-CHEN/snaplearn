@@ -137,10 +137,10 @@ SnapLearn is an **open, inclusive, and innovative** education community. We welc
 
 - ✅ Educator verification & video upload
 - ✅ Content feed & personalized recommendations
-- 🚧 Exercise attachments per video
-- 🚧 AI grading for subjective questions
+- ✅ Exercise attachments per video
+- ✅ AI grading for subjective questions
 - 🚧 AI-powered learning hints
-- 🚧 User wrong answer log & favorites
+- ✅ User wrong answer log & favorites
 - 🚧 Multi-language support
 - 🚧 Docker deployment
 - 🚧 Mobile app (Flutter/React Native)
@@ -152,6 +152,10 @@ SnapLearn is an **open, inclusive, and innovative** education community. We welc
 | Channel                    | Status                                                |
 | -------------------------- | ----------------------------------------------------- |
 | 💬 GitHub Discussions      | ✅ [Open](https://github.com/Yiteng-CHEN/snaplearn/discussions) |
+
+> ⚠️ If you see a 404 error, please enable the Discussions feature in your GitHub repository settings:  
+> Repository Home → Settings → Features → Check Discussions
+
 | 📧 Email Contact           | [eatonchen@hotmail.com](mailto:eatonchen@hotmail.com) |
 | 🧑‍🤝‍🧑 WeChat / Telegram | ⏳ Coming soon                                         |
 

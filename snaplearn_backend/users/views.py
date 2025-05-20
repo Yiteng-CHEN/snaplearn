@@ -6,6 +6,7 @@ from .models import CustomUser, EducationChoices
 from django.core.exceptions import ValidationError
 import json
 import re
+import logging
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -56,8 +57,9 @@ def register(request):
                 email=email,
                 education_level=education_level
             )
-
-            return JsonResponse({'message': '注册成功'}, status=201)
+            # 注册后直接生成 token，便于前端自动登录
+            token, _ = Token.objects.get_or_create(user=user)
+            return JsonResponse({'message': '注册成功', 'token': token.key}, status=201)
         except Exception as e:
             # 返回详细的服务器错误信息
             return JsonResponse({'error': f'服务器内部错误: {str(e)}'}, status=500)

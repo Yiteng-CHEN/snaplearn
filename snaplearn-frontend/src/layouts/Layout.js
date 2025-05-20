@@ -20,6 +20,11 @@ const UserLayout = ({ children }) => {
   const [isVerifiedTeacher, setIsVerifiedTeacher] = useState(false);
   const [role, setRole] = useState('');
   const [adminHover, setAdminHover] = useState(false); // 新增：管理认证按钮hover状态
+  const [publishMenuOpen, setPublishMenuOpen] = useState(false);
+  const [publishMenuLocked, setPublishMenuLocked] = useState(false);
+  const [publishDropdownHoverIndex, setPublishDropdownHoverIndex] = useState(-1);
+  const [hoverOnUsername, setHoverOnUsername] = useState(false);
+  const [hoverOnPublish, setHoverOnPublish] = useState(false);
 
   // 拉取用户信息的函数，供内部和事件调用
   const fetchUser = async () => {
@@ -53,6 +58,18 @@ const UserLayout = ({ children }) => {
     window.addEventListener('avatar-updated', handleAvatarUpdated);
     return () => window.removeEventListener('avatar-updated', handleAvatarUpdated);
   }, []);
+
+  // 互斥逻辑：当锁定一个下拉时，鼠标移到另一个按钮自动关闭当前下拉
+  useEffect(() => {
+    if (publishMenuLocked && hoverOnUsername) {
+      setPublishMenuLocked(false);
+      setPublishMenuOpen(false);
+    }
+    if (menuLocked && hoverOnPublish) {
+      setMenuLocked(false);
+      setShowMenu(false);
+    }
+  }, [publishMenuLocked, hoverOnUsername, menuLocked, hoverOnPublish]);
 
   const handleProfileClick = () => {
     setShowMenu(false);
@@ -234,12 +251,19 @@ const UserLayout = ({ children }) => {
                 setUsernameHover(false);
                 return;
               }
+              setHoverOnUsername(true);
+              // 互斥：如果发布下拉被锁定，移到用户名时自动关闭发布下拉
+              if (publishMenuLocked) {
+                setPublishMenuLocked(false);
+                setPublishMenuOpen(false);
+              }
               if (!menuLocked) {
                 setShowMenu(true);
               }
               setUsernameHover(true);
             }}
             onMouseLeave={() => {
+              setHoverOnUsername(false);
               setUsernameHover(false);
               if (!menuLocked) {
                 setTimeout(() => setShowMenu(false), 200);
@@ -311,6 +335,37 @@ const UserLayout = ({ children }) => {
                 </div>
                 <div
                   style={{
+                    ...styles.dropdownItem,
+                    ...(dropdownHoverIndex === 2 ? styles.dropdownItemHover : {}),
+                  }}
+                  onClick={() => {
+                    setShowMenu(false);
+                    navigate('/mistakebook');
+                  }}
+                  onMouseEnter={() => setDropdownHoverIndex(2)}
+                  onMouseLeave={() => setDropdownHoverIndex(-1)}
+                >
+                  错题集
+                </div>
+                {/* 新增：检查作业按钮，仅老师可见 */}
+                {isVerifiedTeacher && (
+                  <div
+                    style={{
+                      ...styles.dropdownItem,
+                      ...(dropdownHoverIndex === 3 ? styles.dropdownItemHover : {}),
+                    }}
+                    onClick={() => {
+                      setShowMenu(false);
+                      navigate('/checkhomework');
+                    }}
+                    onMouseEnter={() => setDropdownHoverIndex(3)}
+                    onMouseLeave={() => setDropdownHoverIndex(-1)}
+                  >
+                    检查作业
+                  </div>
+                )}
+                <div
+                  style={{
                     ...styles.dropdownItemLast,
                     ...(dropdownHoverIndex === 1 ? styles.dropdownItemLastHover : {}),
                   }}
@@ -323,58 +378,93 @@ const UserLayout = ({ children }) => {
               </div>
             )}
           </span>
-          {/* “发布内容”按钮，仅认证用户可见，采用用户名样式，无下拉菜单 */}
+          {/* “发布”按钮，仅认证用户可见，采用用户名样式，有下拉菜单 */}
           {isVerifiedTeacher && (
-            <>
-              <span
-                style={{
-                  ...styles.username,
-                  marginLeft: 24,
-                  cursor: 'pointer',
-                  color:
-                    window.location.pathname === '/uploadcontentpage'
-                      ? '#1890ff'
-                      : '#fff',
-                  fontWeight: 'bold',
-                  fontSize: '15px',
-                  userSelect: 'none',
-                  transition: 'color 0.2s',
-                }}
-                onClick={() => navigate('/uploadcontentpage')}
-                onMouseEnter={e => (e.target.style.color = '#1890ff')}
-                onMouseLeave={e => {
-                  if (window.location.pathname !== '/uploadcontentpage') {
-                    e.target.style.color = '#fff';
-                  }
-                }}
-              >
-                发布课程
-              </span>
-              <span
-                style={{
-                  ...styles.username,
-                  marginLeft: 24,
-                  cursor: 'pointer',
-                  color:
-                    window.location.pathname === '/manage'
-                      ? '#1890ff'
-                      : '#fff',
-                  fontWeight: 'bold',
-                  fontSize: '15px',
-                  userSelect: 'none',
-                  transition: 'color 0.2s',
-                }}
-                onClick={() => navigate('/manage')}
-                onMouseEnter={e => (e.target.style.color = '#1890ff')}
-                onMouseLeave={e => {
-                  if (window.location.pathname !== '/manage') {
-                    e.target.style.color = '#fff';
-                  }
-                }}
-              >
-                管理课程
-              </span>
-            </>
+            <span
+              style={{
+                ...styles.username,
+                marginLeft: 24,
+                cursor: 'pointer',
+                color:
+                  (window.location.pathname === '/uploadcontentpage' ||
+                    window.location.pathname === '/manage' ||
+                    publishMenuOpen ||
+                    publishMenuLocked)
+                    ? '#1890ff'
+                    : '#fff',
+                fontWeight: 'bold',
+                fontSize: '15px',
+                userSelect: 'none',
+                transition: 'color 0.2s',
+                position: 'relative',
+              }}
+              onMouseEnter={() => {
+                setHoverOnPublish(true);
+                // 互斥：如果用户名下拉被锁定，移到发布时自动关闭用户名下拉
+                if (menuLocked) {
+                  setMenuLocked(false);
+                  setShowMenu(false);
+                }
+                if (!publishMenuLocked) setPublishMenuOpen(true);
+              }}
+              onMouseLeave={() => {
+                setHoverOnPublish(false);
+                if (!publishMenuLocked) setTimeout(() => setPublishMenuOpen(false), 200);
+              }}
+              onClick={() => {
+                if (publishMenuLocked) {
+                  setPublishMenuLocked(false);
+                  setPublishMenuOpen(false);
+                } else {
+                  setPublishMenuLocked(true);
+                  setPublishMenuOpen(true);
+                }
+              }}
+            >
+              发布
+              {(publishMenuOpen || publishMenuLocked) && (
+                <div
+                  style={styles.dropdown}
+                  onMouseEnter={() => {
+                    if (!publishMenuLocked) setPublishMenuOpen(true);
+                  }}
+                  onMouseLeave={() => {
+                    if (!publishMenuLocked) setPublishMenuOpen(false);
+                  }}
+                >
+                  <div
+                    style={{
+                      ...styles.dropdownItem,
+                      ...(publishDropdownHoverIndex === 0 ? styles.dropdownItemHover : {}),
+                    }}
+                    onClick={() => {
+                      setPublishMenuOpen(false);
+                      setPublishMenuLocked(false);
+                      navigate('/uploadcontentpage');
+                    }}
+                    onMouseEnter={() => setPublishDropdownHoverIndex(0)}
+                    onMouseLeave={() => setPublishDropdownHoverIndex(-1)}
+                  >
+                    发布课程
+                  </div>
+                  <div
+                    style={{
+                      ...styles.dropdownItemLast,
+                      ...(publishDropdownHoverIndex === 1 ? styles.dropdownItemLastHover : {}),
+                    }}
+                    onClick={() => {
+                      setPublishMenuOpen(false);
+                      setPublishMenuLocked(false);
+                      navigate('/manage');
+                    }}
+                    onMouseEnter={() => setPublishDropdownHoverIndex(1)}
+                    onMouseLeave={() => setPublishDropdownHoverIndex(-1)}
+                  >
+                    管理课程
+                  </div>
+                </div>
+              )}
+            </span>
           )}
         </div>
       </Header>

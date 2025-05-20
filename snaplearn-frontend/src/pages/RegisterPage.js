@@ -54,11 +54,18 @@ function RegisterPage() {
           },
         }
       );
-      console.log(response.data);
       setSuccess('注册成功！正在自动登录...');
       setError('');
 
       // 注册成功后自动登录
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        setTimeout(() => {
+          navigate('/videos');
+        }, 1000);
+        return;
+      }
+      // 若未返回 token，尝试手动登录
       try {
         const loginResp = await axios.post(
           'http://127.0.0.1:8000/users/login/',
@@ -73,12 +80,11 @@ function RegisterPage() {
             },
           }
         );
-        // 假设后端返回 { token: '...' }
         if (loginResp.data && loginResp.data.token) {
           localStorage.setItem('token', loginResp.data.token);
           setTimeout(() => {
             navigate('/videos');
-          }, 1000); // 1秒后跳转
+          }, 1000);
         } else {
           setError('自动登录失败，请手动登录');
         }
@@ -91,7 +97,6 @@ function RegisterPage() {
       } else {
         setError('注册失败，请稍后重试');
       }
-      console.error('注册失败', error);
       setSuccess('');
     }
   };

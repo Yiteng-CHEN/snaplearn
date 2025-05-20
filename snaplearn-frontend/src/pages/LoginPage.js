@@ -60,16 +60,18 @@ function LoginPage() {
       );
 
       const { token, role } = response.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('role', role);
-
-      // 登录成功后根据角色跳转
-      if (role === 'admin') {
-        window.location.href = '/admin';
+      if (token) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('role', role);
+        // 登录成功后根据角色跳转
+        if (role === 'admin') {
+          window.location.href = '/admin';
+        } else {
+          window.location.href = '/videos';
+        }
       } else {
-        window.location.href = '/videos';
+        setError('登录失败，未获取到token');
       }
-
     } catch (error) {
       if (error.response && error.response.data.error) {
         setError(error.response.data.error);

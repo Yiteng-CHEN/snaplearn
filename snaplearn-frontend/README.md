@@ -1,4 +1,18 @@
-# Getting Started with Create React App
+# SnapLearn 前端
+
+## 启动说明
+
+1. 请确保后端 Django 服务已启动并监听 8000 端口。
+2. 前端开发环境运行：
+   ```bash
+   npm install
+   npm start
+   ```
+3. 默认前端通过 `proxy` 代理到 `http://localhost:8000`，无需手动配置 CORS。
+
+# 其它说明
+
+## Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

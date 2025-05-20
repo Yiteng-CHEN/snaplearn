@@ -5,9 +5,12 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from .models import Video
 from users.models import CustomUser
 from django.conf import settings
+
+from homework.models import Homework, Question
 
 # Create your views here.
 
@@ -84,6 +87,33 @@ def upload_video(request):
                 print(f"ffmpeg error: {e.stderr.decode('utf-8')}")
             except Exception as e:
                 print(f"自动生成视频封面失败: {e}")
+
+        # 新增：同步创建作业内容
+        homework_title = request.POST.get('homework_title')
+        homework_description = request.POST.get('homework_description')
+        questions_json = request.POST.get('questions')
+        if homework_title and questions_json:
+            try:
+                import json
+                questions = json.loads(questions_json)
+                hw = Homework.objects.create(
+                    title=homework_title,
+                    description=homework_description or '',
+                    teacher=request.user,
+                    video=video
+                )
+                for q in questions:
+                    Question.objects.create(
+                        homework=hw,
+                        question_type=q.get('question_type'),
+                        text=q.get('text'),
+                        options=q.get('options', []),
+                        answer=q.get('answer', ''),
+                        score=q.get('score', 5)
+                    )
+            except Exception as e:
+                print(f"作业创建失败: {e}")
+
         return JsonResponse({'message': '视频上传成功', 'video_id': video.id}, status=201)
     except ValidationError as e:
         return JsonResponse({'error': e.message_dict if hasattr(e, 'message_dict') else str(e)}, status=400)
@@ -135,12 +165,40 @@ def delete_video(request, video_id):
         # 记录删除前的学科和学历等级
         subject = video.subject
         education_level = video.education_level
+
         # 删除收藏关系
         video.favorited_by.clear()
         # 删除购买记录
         video.access_records.all().delete()
-        # 删除优惠码
-        video.discount_codes_for_videos.all().delete()
+
+        # --- 删除与视频相关的作业、作业提交、错题 ---
+        from homework.models import Homework
+        # 动态尝试导入 WrongQuestion
+        try:
+            from homework.models import WrongQuestion
+        except ImportError:
+            WrongQuestion = None
+
+        # 动态尝试导入 HomeworkSubmission
+        try:
+            from homework.models import HomeworkSubmission
+        except ImportError:
+            HomeworkSubmission = None
+
+        # 删除作业及其题目
+        homeworks = Homework.objects.filter(video=video)
+        for hw in homeworks:
+            # 删除作业提交（如果模型存在）
+            if HomeworkSubmission:
+                HomeworkSubmission.objects.filter(homework=hw).delete()
+            # 删除错题（如果模型存在）
+            if WrongQuestion:
+                WrongQuestion.objects.filter(video=video).delete()
+                WrongQuestion.objects.filter(homework=hw).delete()
+            # 删除题目（Question 通过 homework 外键级联删除）
+            hw.delete()
+        # --- 结束 ---
+
         # 删除视频文件和封面
         import os
         video_file_path = video.video_file.path if video.video_file else None
@@ -160,13 +218,11 @@ def delete_video(request, video_id):
         # 更新学科分类相关数据（如无视频则可做额外处理）
         from .models import Video as VideoModel
         remain_count = VideoModel.objects.filter(subject=subject, education_level=education_level).count()
-        # 你可以在这里根据业务需要进行学科分类的统计、缓存更新、或删除无用的学科条目等操作
-        # 例如：如果没有该学科该学历的视频了，可以做额外处理
-        # if remain_count == 0:
-        #     # 这里可以更新学科分类表或缓存等
         return JsonResponse({'message': '视频及其所有相关数据删除成功', 'subject': subject, 'education_level': education_level, 'remain_count': remain_count}, status=200)
     except Video.DoesNotExist:
         return JsonResponse({'error': '视频不存在或无权限删除'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'删除失败: {str(e)}'}, status=500)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -181,7 +237,6 @@ def update_video(request, video_id):
         description = request.POST.get('description', video.description)
         is_free = request.POST.get('is_free', str(video.is_free)).lower() == 'true'
         price = request.POST.get('price', video.price)
-
         video.title = title
         video.description = description
         video.is_free = is_free
@@ -200,24 +255,61 @@ def update_video(request, video_id):
                 for chunk in thumbnail.chunks():
                     f.write(chunk)
         elif not os.path.exists(thumb_path):
-            # 自动用视频第一帧生成封面（仅当没有封面时）
             try:
                 video_path = video.video_file.path
-                import subprocess
-                cmd = [
-                    "ffmpeg",
-                    "-y",
-                    "-i", video_path,
-                    "-ss", "00:00:01",
-                    "-vframes", "1",
-                    "-f", "image2",
-                    thumb_path
-                ]
-                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                if not os.path.exists(video_path):
+                    print(f"视频文件不存在，无法生成封面: {video_path}")
+                else:
+                    import subprocess
+                    cmd = [
+                        "ffmpeg",
+                        "-y",
+                        "-i", video_path,
+                        "-ss", "00:00:01",
+                        "-vframes", "1",
+                        "-f", "image2",
+                        thumb_path
+                    ]
+                    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            except FileNotFoundError as e:
+                print(f"ffmpeg 未安装或找不到: {e}")
             except subprocess.CalledProcessError as e:
                 print(f"ffmpeg error: {e.stderr.decode('utf-8')}")
             except Exception as e:
                 print(f"自动生成视频封面失败: {e}")
+
+        # 新增：同步更新作业内容
+        homework_title = request.POST.get('homework_title')
+        homework_description = request.POST.get('homework_description')
+        questions_json = request.POST.get('questions')
+        if homework_title and questions_json:
+            try:
+                import json
+                questions = json.loads(questions_json)
+                hw, created = Homework.objects.get_or_create(video=video, defaults={
+                    'title': homework_title,
+                    'description': homework_description or '',
+                    'teacher': request.user,
+                })
+                if not created:
+                    hw.title = homework_title
+                    hw.description = homework_description or ''
+                    hw.teacher = request.user
+                    hw.save()
+                    # 删除原有题目
+                    hw.questions.all().delete()
+                for q in questions:
+                    Question.objects.create(
+                        homework=hw,
+                        question_type=q.get('question_type'),
+                        text=q.get('text'),
+                        options=q.get('options', []),
+                        answer=q.get('answer', ''),
+                        score=q.get('score', 5)
+                    )
+            except Exception as e:
+                print(f"作业更新失败: {e}")
+
         return JsonResponse({'message': '视频信息更新成功'}, status=200)
     except Video.DoesNotExist:
         return JsonResponse({'error': '视频不存在或无权限更新'}, status=404)
@@ -258,7 +350,6 @@ def list_videos(request):
         qs = qs.order_by(ordering)
         paginator = Paginator(qs, page_size)
         page_obj = paginator.get_page(page)
-
         results = []
         for v in page_obj:
             # 修复缩略图URL为绝对路径
@@ -297,11 +388,10 @@ def favorite_videos(request):
     DELETE: 取消收藏视频（需传 video_id）
     """
     user = request.user
-    if not hasattr(user, 'favorite_videos'):
-        # 动态添加 ManyToManyField（如果模型未定义，建议在 CustomUser 中添加 favorite_videos 字段）
-        from django.db import models
-        if not hasattr(CustomUser, 'favorite_videos'):
-            CustomUser.add_to_class('favorite_videos', models.ManyToManyField(Video, related_name='favorited_by', blank=True))
+    # 动态添加 ManyToManyField（如果模型未定义，建议在 CustomUser 中添加 favorite_videos 字段）
+    from django.db import models
+    if not hasattr(CustomUser, 'favorite_videos'):
+        CustomUser.add_to_class('favorite_videos', models.ManyToManyField(Video, related_name='favorited_by', blank=True))
     if request.method == 'GET':
         videos = user.favorite_videos.all()
         results = []
@@ -358,3 +448,58 @@ def favorite_videos(request):
         except Video.DoesNotExist:
             return JsonResponse({'error': '视频不存在'}, status=404)
     return JsonResponse({'error': '仅支持 GET/POST/DELETE'}, status=405)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def favorites_videos(request):
+    """
+    返回当前用户收藏的视频列表
+    """
+    user = request.user
+    # 假设有 user.favorite_videos 关系，如 ManyToManyField
+    # 如果没有，返回空列表即可
+    results = []
+    if hasattr(user, 'favorite_videos'):
+        videos = user.favorite_videos.all()
+        for v in videos:
+            results.append({
+                'id': v.id,
+                'title': v.title,
+                'description': v.description,
+                'video_url': v.video_file.url if v.video_file else '',
+                'thumbnail_url': v.thumbnail_url if hasattr(v, 'thumbnail_url') else '',
+                'teacher_id': v.teacher.id if v.teacher else None,
+                'teacher_name': v.teacher.username if v.teacher else '',
+                'teacher_avatar': v.teacher.avatar.url if v.teacher and v.teacher.avatar else '',
+                'created_at': v.created_at,
+                # ...可补充其它字段...
+            })
+    return Response({'results': results})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def video_homework(request, video_id):
+    """
+    返回指定视频的作业内容（含题目、答案等）
+    """
+    try:
+        hw = Homework.objects.get(video_id=video_id)
+        questions = hw.questions.all()
+        data = {
+            "id": hw.id,  # 新增
+            "title": hw.title,
+            "description": hw.description,
+            "questions": [
+                {
+                    "question_type": q.question_type,
+                    "text": q.text,
+                    "options": q.options,
+                    "answer": q.answer,
+                    "score": q.score,
+                }
+                for q in questions
+            ]
+        }
+        return JsonResponse(data, status=200)
+    except Homework.DoesNotExist:
+        return JsonResponse({"questions": []}, status=200)

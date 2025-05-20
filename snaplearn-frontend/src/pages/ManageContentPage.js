@@ -12,13 +12,47 @@ const LEVELS = [
   { value: 'master', label: '硕士' },
   { value: 'phd', label: '博士' }
 ];
+const QUESTION_TYPES = [
+  { value: 'single', label: '单选题' },
+  { value: 'multiple', label: '多选题' },
+  { value: 'subjective', label: '主观题' }
+];
 
 function ManageContentPage() {
   const [videos, setVideos] = useState([]);
   const [editStates, setEditStates] = useState({});
   const [editingId, setEditingId] = useState(null);
-  const [thumbnailFile, setThumbnailFile] = useState(null); // 新增：本地封面文件
+  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [hasHomework, setHasHomework] = useState(false);
+  const [homeworkTitle, setHomeworkTitle] = useState('');
+  const [homeworkDesc, setHomeworkDesc] = useState('');
   const navigate = useNavigate();
+
+  // 检查作业内容是否有变化
+  const isHomeworkChanged = (origin, curTitle, curDesc, curQuestions) => {
+    if (!origin) return false;
+    if ((origin.title || '') !== (curTitle || '')) return true;
+    if ((origin.description || '') !== (curDesc || '')) return true;
+    // 题目数量不同
+    if ((origin.questions || []).length !== (curQuestions || []).length) return true;
+    // 题目内容不同
+    for (let i = 0; i < (origin.questions || []).length; i++) {
+      const a = origin.questions[i];
+      const b = curQuestions[i];
+      if (!b) return true;
+      if (a.question_type !== b.question_type) return true;
+      if ((a.text || '') !== (b.text || '')) return true;
+      if ((a.answer || '') !== (b.answer || '')) return true;
+      if (Number(a.score) !== Number(b.score)) return true;
+      // 选项比较
+      if ((a.options || []).join('|||') !== (b.options || []).join('|||')) return true;
+    }
+    return false;
+  };
+
+  // 保存原始作业数据用于对比
+  const [originHomework, setOriginHomework] = useState(null);
 
   useEffect(() => {
     const fetchVideos = async () => {
@@ -28,10 +62,8 @@ function ManageContentPage() {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
-        // 修复：确保 thumbnail_url 字段正确，且为绝对路径，并且推断 video_file 字段
         const videosWithThumb = (response.data.videos || []).map(v => {
           let thumb = v.thumbnail_url;
-          // 如果 thumbnail_url 存在且不是 http(s) 开头，补全为绝对路径
           if (thumb && !/^https?:\/\//.test(thumb)) {
             const origin = window.location.origin;
             if (thumb.startsWith('/')) {
@@ -40,10 +72,8 @@ function ManageContentPage() {
               thumb = origin + '/' + thumb;
             }
           }
-          // 如果没有 thumbnail_url，尝试推断
           if (!thumb) {
             let base = '';
-            // video_file 可能是相对路径或绝对路径
             if (v.video_file) {
               let fileName = '';
               if (typeof v.video_file === 'string') {
@@ -79,7 +109,6 @@ function ManageContentPage() {
     fetchVideos();
   }, [navigate]);
 
-  // 新增：上传封面时自动标记 changed
   useEffect(() => {
     if (!editingId) return;
     if (thumbnailFile) {
@@ -90,28 +119,139 @@ function ManageContentPage() {
     }
   }, [thumbnailFile, editingId]);
 
-  const isChanged = (video, state) => {
-    return (
+  // 编辑模式时拉取题目
+  useEffect(() => {
+    if (!editingId) return;
+    (async () => {
+      try {
+        const res = await axios.get(`http://127.0.0.1:8000/videos/${editingId}/homework/`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.data && Array.isArray(res.data.questions) && res.data.questions.length > 0) {
+          setHasHomework(true);
+          setHomeworkTitle(res.data.title || '');
+          setHomeworkDesc(res.data.description || '');
+          setQuestions(res.data.questions.map(q => ({
+            ...q,
+            options: Array.isArray(q.options) ? q.options : (q.question_type !== 'subjective' ? ['', '', '', ''] : [])
+          })));
+          setOriginHomework({
+            title: res.data.title || '',
+            description: res.data.description || '',
+            questions: res.data.questions.map(q => ({
+              ...q,
+              options: Array.isArray(q.options) ? q.options : (q.question_type !== 'subjective' ? ['', '', '', ''] : [])
+            }))
+          });
+        } else {
+          setHasHomework(false);
+          setHomeworkTitle('');
+          setHomeworkDesc('');
+          setQuestions([{ question_type: 'single', text: '', options: ['', '', '', ''], answer: '', score: 5 }]);
+          setOriginHomework(null);
+        }
+      } catch {
+        setHasHomework(false);
+        setHomeworkTitle('');
+        setHomeworkDesc('');
+        setQuestions([{ question_type: 'single', text: '', options: ['', '', '', ''], answer: '', score: 5 }]);
+        setOriginHomework(null);
+      }
+    })();
+  }, [editingId]);
+
+  // 只要视频信息或作业内容有变化，changed 就为 true
+  const isChanged = (video, state, hasHomework, originHomework, homeworkTitle, homeworkDesc, questions) => {
+    let changed =
       video.title !== state.title ||
       video.description !== state.description ||
       (video.subject || SUBJECTS[0]) !== state.subject ||
       (video.education_level || LEVELS[0].value) !== state.education_level ||
       video.is_free !== state.is_free ||
-      (video.price || '') !== state.price
-    );
+      (video.price || '') !== state.price;
+    if (hasHomework) {
+      changed = changed || isHomeworkChanged(originHomework, homeworkTitle, homeworkDesc, questions);
+    }
+    // 如果作业从有到无或无到有也算变化
+    if (!!originHomework !== !!hasHomework) changed = true;
+    return changed;
   };
+
+  // 检查视频和作业内容是否有变化，自动设置 changed
+  useEffect(() => {
+    if (!editingId) return;
+    setEditStates(prev => {
+      const video = videos.find(v => v.id === editingId);
+      const state = prev[editingId];
+      const changed = isChanged(
+        video,
+        state,
+        hasHomework,
+        originHomework,
+        homeworkTitle,
+        homeworkDesc,
+        questions
+      );
+      return { ...prev, [editingId]: { ...state, changed } };
+    });
+    // eslint-disable-next-line
+  }, [homeworkTitle, homeworkDesc, questions, hasHomework, originHomework, editingId, videos]);
 
   const handleFieldChange = (id, field, value) => {
     setEditStates(prev => {
-      const newState = { ...prev[id], [field]: value };
       const video = videos.find(v => v.id === id);
-      newState.changed = isChanged(video, newState);
+      const newState = { ...prev[id], [field]: value };
+      // 这里也要用新的 isChanged
+      newState.changed = isChanged(
+        video,
+        newState,
+        hasHomework,
+        originHomework,
+        homeworkTitle,
+        homeworkDesc,
+        questions
+      );
       return { ...prev, [id]: newState };
     });
   };
 
+  const handleQuestionChange = (idx, field, value) => {
+    setQuestions(qs => {
+      const arr = [...qs];
+      arr[idx][field] = value;
+      if (field === 'question_type') {
+        if (value === 'subjective') {
+          arr[idx].options = [];
+          arr[idx].answer = '';
+        } else {
+          arr[idx].options = ['', '', '', ''];
+          arr[idx].answer = '';
+        }
+      }
+      return arr;
+    });
+  };
+
+  const handleOptionChange = (qIdx, oIdx, value) => {
+    setQuestions(qs => {
+      const arr = [...qs];
+      arr[qIdx].options[oIdx] = value;
+      return arr;
+    });
+  };
+
+  const addQuestion = () => {
+    setQuestions(qs => [...qs, { question_type: 'single', text: '', options: ['', '', '', ''], answer: '', score: 5 }]);
+  };
+
+  const removeQuestion = idx => {
+    setQuestions(qs => qs.length > 1 ? qs.filter((_, i) => i !== idx) : qs);
+  };
+
   const handleEdit = (id) => {
     setEditingId(id);
+    // 自动展开作业区域（如果有作业，useEffect 拉取后会 setHasHomework(true)）
+    setHasHomework(true);
   };
 
   const handleCancel = () => {
@@ -126,10 +266,15 @@ function ManageContentPage() {
       formData.append('description', state.description);
       formData.append('subject', state.subject);
       formData.append('education_level', state.education_level);
-      formData.append('is_free', state.is_free);
-      formData.append('price', state.is_free ? '' : state.price);
+      formData.append('is_free', state.is_free ? 'true' : 'false');
+      formData.append('price', state.is_free ? '' : String(state.price || ''));
       if (thumbnailFile) {
-        formData.append('thumbnail', thumbnailFile); // 新增：上传封面
+        formData.append('thumbnail', thumbnailFile);
+      }
+      if (hasHomework) {
+        formData.append('homework_title', homeworkTitle);
+        formData.append('homework_description', homeworkDesc);
+        formData.append('questions', JSON.stringify(questions));
       }
       await axios.post(
         `http://127.0.0.1:8000/videos/${id}/update/`,
@@ -160,10 +305,16 @@ function ManageContentPage() {
         ...prev,
         [id]: { ...prev[id], changed: false }
       }));
+      setThumbnailFile(null);
+      alert('保存成功');
       setEditingId(null);
-      setThumbnailFile(null); // 清空本地封面
     } catch (error) {
-      alert('更新视频信息失败');
+      // 新增：打印后端返回的详细错误
+      if (error.response && error.response.data && error.response.data.error) {
+        alert('更新视频信息失败: ' + error.response.data.error);
+      } else {
+        alert('更新视频信息失败');
+      }
     }
   };
 
@@ -183,7 +334,12 @@ function ManageContentPage() {
       });
       if (editingId === videoId) setEditingId(null);
     } catch (error) {
-      alert('删除视频失败');
+      // 新增：显示后端返回的详细错误
+      if (error.response && error.response.data && error.response.data.error) {
+        alert('删除视频失败: ' + error.response.data.error);
+      } else {
+        alert('删除视频失败');
+      }
     }
   };
 
@@ -297,11 +453,9 @@ function ManageContentPage() {
     }
   };
 
-  // 编辑模式：只显示单个视频的表单
   if (editingId) {
     const state = editStates[editingId];
     const video = videos.find(v => v.id === editingId);
-    // 仿照上传页面的样式
     const uploadStyles = {
       container: {
         maxWidth: '400px',
@@ -457,28 +611,131 @@ function ManageContentPage() {
                 onChange={e => setThumbnailFile(e.target.files[0])}
                 style={{ marginTop: 8 }}
               />
-              {/* 新增：显示已有封面路径 */}
               {video && video.thumbnail_url && (
                 <div style={{ marginTop: 6, color: '#888', fontSize: 13 }}>
                   当前封面：<span style={{ wordBreak: 'break-all' }}>{video.thumbnail_url}</span>
                 </div>
               )}
             </div>
-            <div style={uploadStyles.freeRow}>
-              {!state.is_free && (
-                <>
-                  <span>价格：</span>
-                  <input
-                    type="number"
-                    style={{ ...uploadStyles.input, width: 80, margin: 0 }}
-                    value={state.price}
-                    min={0}
-                    onChange={e => handleFieldChange(editingId, 'price', e.target.value)}
-                  />
-                  <span>SnapCoin</span>
-                </>
-              )}
+            <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={hasHomework}
+                onChange={e => setHasHomework(e.target.checked)}
+                id="edit-homework"
+                style={{ marginRight: 8 }}
+              />
+              <label htmlFor="edit-homework" style={{ fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>包含作业</label>
             </div>
+            {hasHomework && (
+              <div style={{
+                border: '1px solid #eee',
+                borderRadius: 8,
+                padding: 18,
+                marginBottom: 18,
+                background: '#fafbfc'
+              }}>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ fontWeight: 'bold' }}>作业标题：</label>
+                  <input
+                    type="text"
+                    value={homeworkTitle}
+                    onChange={e => setHomeworkTitle(e.target.value)}
+                    style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc', marginTop: 8 }}
+                    required
+                  />
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ fontWeight: 'bold' }}>作业描述：</label>
+                  <textarea
+                    value={homeworkDesc}
+                    onChange={e => setHomeworkDesc(e.target.value)}
+                    style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc', marginTop: 8, minHeight: 40 }}
+                  />
+                </div>
+                {questions.map((q, idx) => (
+                  <div key={idx} style={{ border: '1px solid #eee', borderRadius: 6, padding: 16, marginBottom: 18, background: '#fff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontWeight: 'bold', marginRight: 12 }}>题目{idx + 1}</span>
+                      <select
+                        value={q.question_type}
+                        onChange={e => handleQuestionChange(idx, 'question_type', e.target.value)}
+                        style={{ padding: 4, borderRadius: 4, border: '1px solid #ccc', marginRight: 8 }}
+                      >
+                        {QUESTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                      <button type="button" onClick={() => removeQuestion(idx)} style={{ marginLeft: 'auto', color: '#f00', background: 'none', border: 'none', cursor: 'pointer' }}>删除</button>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <input
+                        type="text"
+                        placeholder="题干"
+                        value={q.text}
+                        onChange={e => handleQuestionChange(idx, 'text', e.target.value)}
+                        style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #ccc' }}
+                        required
+                      />
+                    </div>
+                    {(q.question_type === 'single' || q.question_type === 'multiple') && (
+                      <>
+                        <div style={{ marginBottom: 8 }}>
+                          {q.options.map((opt, oIdx) => (
+                            <div key={oIdx} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                              <span style={{ width: 18 }}>{String.fromCharCode(65 + oIdx)}.</span>
+                              <input
+                                type="text"
+                                value={opt}
+                                onChange={e => handleOptionChange(idx, oIdx, e.target.value)}
+                                style={{ flex: 1, padding: 4, borderRadius: 4, border: '1px solid #ccc' }}
+                                required
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <label>参考答案：</label>
+                          <input
+                            type="text"
+                            placeholder={q.question_type === 'single' ? '如A' : '如A,B'}
+                            value={q.answer}
+                            onChange={e => handleQuestionChange(idx, 'answer', e.target.value)}
+                            style={{ width: 120, padding: 4, borderRadius: 4, border: '1px solid #ccc' }}
+                            required
+                          />
+                          <span style={{ color: '#888', marginLeft: 8 }}>
+                            {q.question_type === 'single' ? '（单选，填A/B/C/D）' : '（多选，填A,B）'}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {q.question_type === 'subjective' && (
+                      <div style={{ marginBottom: 8 }}>
+                        <label>参考答案及评分标准：</label>
+                        <textarea
+                          value={q.answer}
+                          onChange={e => handleQuestionChange(idx, 'answer', e.target.value)}
+                          style={{ width: '100%', padding: 4, borderRadius: 4, border: '1px solid #ccc', minHeight: 40 }}
+                          required
+                        />
+                        <span style={{ color: '#888', fontSize: 13 }}>（主观题答案及评分标准，后续将被AI调用作为打分标准）</span>
+                      </div>
+                    )}
+                    <div>
+                      <label>分值：</label>
+                      <input
+                        type="number"
+                        value={q.score}
+                        min={1}
+                        onChange={e => handleQuestionChange(idx, 'score', e.target.value)}
+                        style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #ccc' }}
+                        required
+                      />
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={addQuestion} style={{ marginBottom: 18, background: '#eee', border: 'none', borderRadius: 4, padding: '8px 18px', cursor: 'pointer' }}>添加题目</button>
+              </div>
+            )}
             <div style={uploadStyles.actionRow}>
               <button
                 type="submit"
@@ -501,7 +758,6 @@ function ManageContentPage() {
     );
   }
 
-  // 列表模式
   return (
     <UserLayout>
       <div style={styles.container}>
