@@ -16,4 +16,5 @@ urlpatterns = [
     path('submit_by_video/<int:video_id>/', views.submit_homework_by_video, name='submit_homework_by_video'),
     path('<int:homework_id>/add_question/', add_question, name='add_question'),
     path('correct_subjective/', views.correct_subjective_answer, name='correct_subjective_answer'),
+    path('my_scores/', views.my_scores, name='my_scores'),
 ]

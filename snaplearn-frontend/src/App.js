@@ -18,6 +18,8 @@ import MistakeReviewBook from './pages/MistakeReviewBook';
 import CheckHomework from './pages/CheckHomework';
 import CheckHomeworkStudents from './pages/CheckHomeworkStudents';
 import CheckHomeworkDetail from './pages/CheckHomeworkDetail';
+// 新增
+import ScoreQueryPage from './pages/ScoreQueryPage';
 
 function App() {
   // 检查用户是否已登录
@@ -153,6 +155,11 @@ function App() {
               onBack={() => setCheckState({ step: 1, homeworkId: checkState.homeworkId })}
             />
           )
+        } />
+        <Route path="/scorequery" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <ScoreQueryPage />
+          </ProtectedRoute>
         } />
       </Routes>
     </Router>

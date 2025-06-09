@@ -12,8 +12,10 @@ function MistakeReviewBook() {
     axios.get('/homework/mistakebook/', {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     }).then(res => {
-      setQuestions(res.data || []);
-      setAnswers((res.data || []).map(() => ''));
+      // 只保留已批改的错题
+      const gradedQuestions = (res.data || []).filter(q => q.status === 'graded' || !q.status);
+      setQuestions(gradedQuestions);
+      setAnswers(gradedQuestions.map(() => ''));
     });
   }, []);
 

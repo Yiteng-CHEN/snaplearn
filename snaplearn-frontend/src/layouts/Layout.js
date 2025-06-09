@@ -333,6 +333,21 @@ const UserLayout = ({ children }) => {
                 >
                   个人资料
                 </div>
+                {/* 新增：成绩查询 */}
+                <div
+                  style={{
+                    ...styles.dropdownItem,
+                    ...(dropdownHoverIndex === 4 ? styles.dropdownItemHover : {}),
+                  }}
+                  onClick={() => {
+                    setShowMenu(false);
+                    navigate('/scorequery');
+                  }}
+                  onMouseEnter={() => setDropdownHoverIndex(4)}
+                  onMouseLeave={() => setDropdownHoverIndex(-1)}
+                >
+                  查询成绩
+                </div>
                 <div
                   style={{
                     ...styles.dropdownItem,

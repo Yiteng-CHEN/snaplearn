@@ -11,6 +11,7 @@ function DoHomework() {
   const [submitted, setSubmitted] = useState(false);
   const [scoreInfo, setScoreInfo] = useState(null);
   const [showScoreModal, setShowScoreModal] = useState(false);
+  const [pendingModal, setPendingModal] = useState(false); // 新增
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,10 +54,17 @@ function DoHomework() {
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setScoreInfo(res.data);
-      setShowScoreModal(true);
-      setMsg('');
-      setSubmitted(true);
+      // 判断是否为待批改状态
+      if (res.data && res.data.status === 'pending') {
+        setPendingModal(true);
+        setMsg('');
+        setSubmitted(true);
+      } else {
+        setScoreInfo(res.data);
+        setShowScoreModal(true);
+        setMsg('');
+        setSubmitted(true);
+      }
     } catch {
       setMsg('提交失败，请稍后重试');
     }
@@ -137,6 +145,45 @@ function DoHomework() {
                   }}
                 >确定</button>
               </div>
+            </div>
+          </div>
+        )}
+        {/* 新增：待批改弹窗 */}
+        {pendingModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, width: '100vw', height: '100vh',
+            background: 'rgba(0,0,0,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999
+          }}>
+            <div style={{
+              background: '#fff',
+              borderRadius: 8,
+              padding: '32px 40px',
+              minWidth: 320,
+              boxShadow: '0 2px 16px rgba(0,0,0,0.18)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontWeight: 'bold', fontSize: 20, marginBottom: 18 }}>提交成功</div>
+              <div style={{ marginBottom: 18 }}>作业已提交，成绩将在特定时段批改后可在“成绩查询”中查看。</div>
+              <button
+                style={{
+                  background: '#1890ff',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 4,
+                  padding: '10px 24px',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                  cursor: 'pointer'
+                }}
+                onClick={() => {
+                  setPendingModal(false);
+                  // 跳转到成绩查询页
+                  navigate('/scorequery');
+                }}
+              >去成绩查询</button>
             </div>
           </div>
         )}

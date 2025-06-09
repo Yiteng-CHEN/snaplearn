@@ -13,6 +13,14 @@ from django.db.models import Q
 import random
 from django.utils import timezone
 from videos.models import Video
+from datetime import datetime, time, timedelta
+import pytz
+
+def is_discount_time():
+    # DeepSeek 优惠时段：北京时间 00:30-08:30
+    tz = pytz.timezone('Asia/Shanghai')
+    now = datetime.now(tz).time()
+    return time(0, 30) <= now <= time(8, 30)
 
 class UploadHomeworkView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -251,14 +259,19 @@ def submit_homework_by_video(request, video_id):
         answer_map = {str(idx): ans for idx, ans in enumerate(answers)}
     else:
         answer_map = answers
-    for idx, q in enumerate(homework.questions.all()):
-        ans = answer_map.get(str(idx)) or answer_map.get(str(q.id)) or ''
-        # 客观题
-        if q.question_type in ['single', 'multiple']:
+
+    # 判断是否包含主观题
+    questions = list(homework.questions.all())
+    has_subjective = any(q.question_type == 'subjective' for q in questions)
+
+    # 如果没有主观题，直接批改所有题目
+    if not has_subjective:
+        for idx, q in enumerate(questions):
+            ans = answer_map.get(str(idx)) or answer_map.get(str(q.id)) or ''
             correct = False
             if q.question_type == 'single':
                 correct = (str(ans).strip().upper() == str(q.answer).strip().upper())
-            else:
+            elif q.question_type == 'multiple':
                 ans_set = set([x.strip().upper() for x in str(ans).split(',') if x.strip()])
                 std_set = set([x.strip().upper() for x in str(q.answer).split(',') if x.strip()])
                 correct = ans_set == std_set and len(ans_set) == len(std_set)
@@ -266,7 +279,6 @@ def submit_homework_by_video(request, video_id):
             comment = "正确" if correct else "错误"
             if not correct:
                 explanations.append(f"题目：{q.text}，你的答案：{ans}，正确答案：{q.answer}")
-            # 错题集逻辑
             mb, created = MistakeBook.objects.get_or_create(student=user, question=q)
             if correct:
                 mb.delete()
@@ -274,50 +286,107 @@ def submit_homework_by_video(request, video_id):
                 mb.wrong_times = 0
                 mb.last_wrong_answer = str(ans)
                 mb.save()
-        else:
-            # 主观题，调用AI
-            ai_result = {}
-            try:
-                ai_result = requests.post(
-                    "http://127.0.0.1:8001/api/grade/",
-                    json={
-                        "question": q.text,
-                        "answer": ans,
-                        "reference_answer": q.answer,
-                        "max_score": q.score  # 传递题目分数
-                    }
-                ).json()
-            except Exception:
-                ai_result = {"score": 0, "comment": "AI批改失败"}
-            score = ai_result.get("score", 0)
-            comment = ai_result.get("comment", "")
-            if score < q.score:
-                explanations.append(f"题目：{q.text}，AI评语：{comment}")
-            mb, created = MistakeBook.objects.get_or_create(student=user, question=q)
-            if score == q.score:
-                mb.delete()
-            else:
-                mb.wrong_times = 0
-                mb.last_wrong_answer = str(ans)
-                mb.save()
-        StudentAnswer.objects.create(
-            question=q,
-            student=user,
-            answer=ans,
-            score=score,
-            comment=comment,
-            graded=True,
+            StudentAnswer.objects.create(
+                question=q,
+                student=user,
+                answer=ans,
+                score=score,
+                comment=comment,
+                graded=True,
+            )
+            total_score += score
+        StudentHomeworkResult.objects.update_or_create(
+            homework=homework, student=user,
+            defaults={'total_score': total_score, 'explanations': explanations, 'status': 'graded'}
         )
-        total_score += score
-    # 保存学生作业成绩
-    StudentHomeworkResult.objects.update_or_create(
-        homework=homework, student=user,
-        defaults={'total_score': total_score, 'explanations': explanations}
-    )
-    return Response({
-        "total_score": total_score,
-        "explanations": explanations
-    })
+        return Response({
+            "total_score": total_score,
+            "explanations": explanations
+        })
+
+    # 有主观题，判断是否在优惠时段
+    if is_discount_time():
+        for idx, q in enumerate(questions):
+            ans = answer_map.get(str(idx)) or answer_map.get(str(q.id)) or ''
+            if q.question_type in ['single', 'multiple']:
+                correct = False
+                if q.question_type == 'single':
+                    correct = (str(ans).strip().upper() == str(q.answer).strip().upper())
+                else:
+                    ans_set = set([x.strip().upper() for x in str(ans).split(',') if x.strip()])
+                    std_set = set([x.strip().upper() for x in str(q.answer).split(',') if x.strip()])
+                    correct = ans_set == std_set and len(ans_set) == len(std_set)
+                score = q.score if correct else 0
+                comment = "正确" if correct else "错误"
+                if not correct:
+                    explanations.append(f"题目：{q.text}，你的答案：{ans}，正确答案：{q.answer}")
+                mb, created = MistakeBook.objects.get_or_create(student=user, question=q)
+                if correct:
+                    mb.delete()
+                else:
+                    mb.wrong_times = 0
+                    mb.last_wrong_answer = str(ans)
+                    mb.save()
+            else:
+                # 主观题，调用AI
+                ai_result = {}
+                try:
+                    ai_result = requests.post(
+                        "http://127.0.0.1:8001/api/grade/",
+                        json={
+                            "question": q.text,
+                            "answer": ans,
+                            "reference_answer": q.answer,
+                            "max_score": q.score  # 传递题目分数
+                        }
+                    ).json()
+                except Exception:
+                    ai_result = {"score": 0, "comment": "AI批改失败"}
+                score = ai_result.get("score", 0)
+                comment = ai_result.get("comment", "")
+                if score < q.score:
+                    explanations.append(f"题目：{q.text}，AI评语：{comment}")
+                mb, created = MistakeBook.objects.get_or_create(student=user, question=q)
+                if score == q.score:
+                    mb.delete()
+                else:
+                    mb.wrong_times = 0
+                    mb.last_wrong_answer = str(ans)
+                    mb.save()
+            StudentAnswer.objects.create(
+                question=q,
+                student=user,
+                answer=ans,
+                score=score,
+                comment=comment,
+                graded=True,
+            )
+            total_score += score
+        StudentHomeworkResult.objects.update_or_create(
+            homework=homework, student=user,
+            defaults={'total_score': total_score, 'explanations': explanations, 'status': 'graded'}
+        )
+        return Response({
+            "total_score": total_score,
+            "explanations": explanations
+        })
+    else:
+        # 非优惠时段，保存为待批改
+        for idx, q in enumerate(questions):
+            ans = answer_map.get(str(idx)) or answer_map.get(str(q.id)) or ''
+            StudentAnswer.objects.create(
+                question=q,
+                student=user,
+                answer=ans,
+                score=None,
+                comment='',
+                graded=False,
+            )
+        StudentHomeworkResult.objects.update_or_create(
+            homework=homework, student=user,
+            defaults={'total_score': None, 'explanations': [], 'status': 'pending', 'submitted_at': timezone.now()}
+        )
+        return Response({'msg': '已提交，成绩将在优惠时段批改后可查询', 'status': 'pending'})
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
@@ -426,3 +495,22 @@ def correct_subjective_answer(request):
         return Response({'message': '修正成功'})
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def my_scores(request):
+    """
+    查询当前用户所有作业成绩
+    """
+    user = request.user
+    results = StudentHomeworkResult.objects.filter(student=user).order_by('-submitted_at')
+    data = []
+    for r in results:
+        data.append({
+            'homework_title': r.homework.title if r.homework else '',
+            'submitted_at': r.submitted_at,
+            'status': getattr(r, 'status', 'graded' if r.total_score is not None else 'pending'),
+            'total_score': r.total_score,
+            'explanations': r.explanations if hasattr(r, 'explanations') else [],
+        })
+    return Response(data)

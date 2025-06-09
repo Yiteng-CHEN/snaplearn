@@ -44,9 +44,10 @@ class ScoreCorrectionLog(models.Model):
 class StudentHomeworkResult(models.Model):
     homework = models.ForeignKey(Homework, on_delete=models.CASCADE)
     student = models.ForeignKey(User, on_delete=models.CASCADE)
-    total_score = models.FloatField()
+    total_score = models.FloatField(null=True, blank=True)  # 允许为null
     explanations = models.JSONField(default=list, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='graded')  # graded/pending
 
     class Meta:
         unique_together = ('homework', 'student')

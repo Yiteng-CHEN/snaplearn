@@ -183,3 +183,6 @@ If you're:
 ⭐ **Star this project and join us — let's build the next-generation education platform together!**
 
 > We welcome all feedback, suggestions, and PRs. Join us and make a difference!
+
+## Acknowledgements
+
