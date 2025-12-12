@@ -55,7 +55,7 @@ SnapLearn is a community-driven platform where users learn efficiently through *
 - Teacher verification dashboard
 - AI-powered learning (planned)
 
-> Example placeholders:  
+> Example:  
 > ![Feed Demo](docs/demo_feed.png)  
 > ![Teacher Dashboard Demo](docs/demo_teacher.png)
 
